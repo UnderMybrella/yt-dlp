@@ -14,6 +14,8 @@ import threading
 import time
 import traceback
 
+from typing import Dict
+
 from .common import InfoExtractor, SearchInfoExtractor
 from ..compat import (
     compat_chr,
@@ -3292,6 +3294,15 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
             return self.url_result(
                 trailer_video_id, self.ie_key(), trailer_video_id)
 
+        trailer_video_id = get_first(
+            playability_statuses,
+            ('errorScreen', 'ypcTrailerRenderer', 'unserializedPlayerResponse', 'videoDetails', 'videoId'),
+            expected_type=str)
+
+        if trailer_video_id:
+            return self.url_result(
+                trailer_video_id, self.ie_key(), trailer_video_id)
+
         search_meta = ((lambda x: self._html_search_meta(x, webpage, default=None))
                        if webpage else (lambda x: None))
 
@@ -3735,6 +3746,36 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
             needs_subscription=is_membersonly,
             needs_auth=info['age_limit'] >= 18,
             is_unlisted=None if is_private is None else is_unlisted)
+
+        # TODO Endscreens
+        endscreenRenderer = get_first(
+            player_responses,
+            ('endscreen', 'endscreenRenderer', 'elements'),
+            expected_type=list)
+
+        if endscreenRenderer:
+            endscreens = []
+
+            for card in endscreenRenderer:
+                card = card['endscreenElementRenderer']
+                card_thumbnails = self._extract_thumbnails(card, 'image')
+                endscreens.append({
+                    'aspectRatio': card['aspectRatio'],
+                    'endMs': card['endMs'],
+                    'left': card['left'],
+                    'startMs': card['startMs'],
+                    'style': card['style'],
+                    'thumbnails': card_thumbnails,
+                    # The best thumbnail that we are sure exists. Prevents unnecessary
+                    # URL checking if user don't care about getting the best possible thumbnail
+                    'thumbnail': traverse_obj(card_thumbnails, (-1, 'url')),
+                    'title': card['title']['simpleText'],
+                    'top': card['top'],
+                    'video_id': card['endpoint']['watchEndpoint']['videoId'],
+                    'width': card['width']
+                })
+
+            info['endscreens'] = endscreens
 
         info['__post_extractor'] = self.extract_comments(master_ytcfg, video_id, contents, webpage)
 
