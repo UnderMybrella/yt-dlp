@@ -14,8 +14,6 @@ import threading
 import time
 import traceback
 
-from typing import Dict
-
 from .common import InfoExtractor, SearchInfoExtractor
 from ..compat import (
     compat_chr,
