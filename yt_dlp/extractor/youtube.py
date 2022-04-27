@@ -3757,7 +3757,7 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
             for card in endscreenRenderer:
                 card = card['endscreenElementRenderer']
                 card_thumbnails = self._extract_thumbnails(card, 'image')
-                endscreens.append({
+                card_info = {
                     'aspectRatio': card['aspectRatio'],
                     'endMs': card['endMs'],
                     'left': card['left'],
@@ -3769,9 +3769,13 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
                     'thumbnail': traverse_obj(card_thumbnails, (-1, 'url')),
                     'title': card['title']['simpleText'],
                     'top': card['top'],
-                    'video_id': card['endpoint']['watchEndpoint']['videoId'],
                     'width': card['width']
-                })
+                }
+
+                if card['style'] == 'VIDEO':
+                    card_info['video_id'] = card['endpoint']['watchEndpoint']['videoId']
+
+                endscreens.append(card_info)
 
             info['endscreens'] = endscreens
 
